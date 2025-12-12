@@ -1,0 +1,571 @@
+---
+title: "Rain on Easter Sunday"
+author: "Nick"
+date: "2025-08-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Background
+
+When I was a kid my father and his father, my grandfather, use to say "if it rains on Easter Sunday it will rain the next seven Sundays." Even as a kid I questioned, could that really be true? I remember trying to count how many consecutive Sundays it would rain following rain on Easter Sunday but I never managed to successfully keep track of it to know if it actually rained for the next seven Sundays or not.
+
+This work will attempt to either prove the old saying true or debunk it by analyzing the weather data for one location. The one location used for this work will be Dubuque, Iowa and that is only because that is the station closest to where I grew up as a kid and also closest to where both my father and grandfather grew up. This work could easily be expanded and modified a little to study other locations as well.
+
+The question this work will answer is:
+
+* For Dubuque, Iowa, if it rained on Easter Sunday, did it rain the next seven Sundays following Easter?
+
+
+# The Data
+
+The data required to answer this question is straight forward, only two datasets are needed:
+
+* The first dataset required is, weather data for Dubuque, Iowa that has both the date and the amount of rain for the day
+* The second dataset required is, the dates of Easter Sunday going back in history as far as the weather data
+
+The following sections will discuss the two datasets used for this work.
+
+
+### Weather Data
+
+A few years ago when I was working on a different project that required weather data for building net load forecasting models for a utility company, a local meteorologist pointed me to the Iowa Environmental Mesonet site hosted by Iowa State University. You can find the site here: <https://mesonet.agron.iastate.edu/>
+
+The disclaimer page explains how while they strive to provide accurate information there may be errors and therefore the data is provided as is without any warranty of accuracy. It states how the data is part of the public domain and can be freely used. It also points out how the Iowa Environmental Mesonet is a volunteer effort  and receives no funding and that it may be discontinued at any time with little or no notice. See the disclaimer page for more details <https://mesonet.agron.iastate.edu/disclaimer.php>
+
+For this simple work the source of the weather data seems to be a reliable and accurate source. However, it is a public data set, it is handled as volunteer effort, thus, if the accuracy of the data was highly critical for the project it would be worth trying to get in touch with the owners of the data to have a conversation to try to determine how trustworthy the data is or not. Additionally, other weather data sources could be found and used to compare with this data as well. However, that is out of the scope of this work.
+
+The data used for this work can be found from the following page:
+<https://mesonet.agron.iastate.edu/request/daily.phtml>
+
+This page lets you select the stations you want data for, the range of the data, what variables you want, how missing values should be treated, and the download format for the data. Once you make the desired selections it updates an example automation curl for automating the data extraction, which provides a direct link that can be used to request the data in the desired format.
+
+The selected stations to gather data for are:
+
+* DBQ -- Dubuque (1951-Now)
+* ALO -- Waterloo (1949-Now)
+* BRL -- Burlington (1931-Now)
+* CID -- Cedar Rapids (1972-Now)
+* DSM -- Des Moines (1928-Now)
+
+Looking at the station list it is seen that Dubuque has data going back to 1951. At the time of this work it is 2025 so that is 75 years of data, so not a lot but enough for answering the question for this work.
+
+The date range for the data will be from 1900-01-01 to 2025-07-22 (Year-Month-Day)
+Note that this is the default date range and was used as is, even though the data does not go all the way back to 1900.
+Start: Year = 1900, Month = Jan, Day = 1
+End:   Year = 2025, Month = Jul, Day = 22
+
+By default all the available daily variables for the dataset are selected for the data request. The list of variables is below. Looking through the list the variable named precip_in is the variable for the Daily Precipitation in units of inches. This will be the key variable used for this work to know if it rained or not, i.e., if precip_in is greater than zero then it rained.
+
+Select from available daily variables
+Note: Values of 0.0001 inches are Trace Reports
+ 
+* [max_temp_f] Maximum Air Temperature [F].
+* [min_temp_f] Minimum Air Temperature [F].
+* [max_dewpoint_f] Maximum Dew Point [F].
+* [min_dewpoint_f] Minimum Dew Point [F].
+* [precip_in] Daily Precipitation [inch].
+* [avg_wind_speed_kts] Average Wind Speed [knots]
+* [avg_wind_drct] Average Wind Direction [deg]
+* [min_rh] Minimum Relative Humidity [%]
+* [avg_rh] Average Relative Humidity [%]: computed by time averaging the available reports, it is not average of the daily max/min.
+* [max_rh] Maximum Relative Humidity [%]
+* [climo_high_f] NCEI 1991-2020 Daily High Temperature Climatology [F]
+* [climo_low_f] NCEI 1991-2020 Daily Low Temperature Climatology [F]
+* [climo_precip_in] NCEI 1991-2020 Daily Precipitation Climatology [inch]
+* [snow_in] Reported Snowfall [inch]
+* [snowd_in] Reported Snow Depth [inch]
+* [min_feel] Minimum 'Feels Like' (either wind chill or heat index) temperature. The value is always at least the air temperature.
+* [avg_feel] Average 'Feels Like' (either wind chill or heat index) temperature. The value is always at least the air temperature. Value is a time weighted average.
+* [max_feel] Maximum 'Feels Like' (either wind chill or heat index) temperature. The value is always at least the air temperature.
+* [max_wind_speed_kts] Maximum sustained wind speed in knots.
+* [max_wind_gust_kts] Maximum wind gust in knots.
+* [srad_mj] Daily Solar Radiation MJ/m2 (when available).
+
+
+### Easter Sunday Dates
+
+The second dataset required to answer the question is the Easter Sunday dates. Finding this data was a little interesting as Easter is not a fixed day of the month every year. After an initial search I found how the date of Easter is calculated from the USCCB site see the link below.
+
+USCC site that provides information for how Easter Sunday dates are determined.
+<https://www.usccb.org/prayer-worship/liturgical-year/easter#tab--how-are-the-dates-for-easter-palm-sunday-and-ash-wednesday-determined>
+
+The site says this: "Easter is celebrated on the first Sunday after the Paschal full moon, which is the first full moon occurring either on or after the spring equinox (March 21). As a result, Easter will always fall between March 22 and April 25."
+
+I never knew that was how the Easter date was determined. The site provided a date range for which Easter could fall. It also means if we can determine the date of the Paschal full moon for each year, then we can determine the date of Easter.
+
+After doing some research on the Paschal full moon this led me to the Wikipedia page on the Ecclesiastical full moon. The page explains how the paschal full moon corresponds to the ecclesiastical full moon for the northern spring. It also explains how the ecclesiastical equinox is a fixed date by the Gregorian reform of the calendar. Here is the link to the Wikipedia page where you can read all the details. <https://en.wikipedia.org/wiki/Ecclesiastical_full_moon>
+
+At the end of the Wikipedia page under the References section are these two references:
+
+* "Easter Dating Method - Calculate the Date of Easter Sunday". www.assa.org.au. Retrieved 2022-09-29. <https://www.assa.org.au/edm/>
+*  "Easter Dates from 1600 to 2099". Census.gov. United States Census Bureau. Retrieved 2022-09-29. <https://www.census.gov/data/software/x13as/genhol/easter-dates.html>
+
+After reviewing both sites from the references and comparing some of the Easter dates, both sites seemed to agree with each other. Note that I did not compare every single date.
+
+Additionally, I checked the Easter dates on the census.gov site to the 'Holidays in United States' Google calendar for the years 2020-2030.
+Here is the link to 'Holidays in United States' calendar <https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FChicago>
+
+All the Easter dates on the census.gov site from 2020-2030 agree with the dates on the calendar. Therefore, I am assuming this is a good and accurate source for Easter dates.
+
+For this work the Easter dates I am using are from the census.gov site. This is because a link to an Excel file and a text file for the dates was provided. I downloaded the Excel file and used it locally for this work.
+
+Here are the direct links to the Excel and corresponding text file that contain the Easter dates used for this work.
+
+* Direct link to Excel file: <https://www2.census.gov/software/x-13arima-seats/win-genhol/documentation/easter500.xls>
+* Direct link to text file: <https://www2.census.gov/software/x-13arima-seats/win-genhol/download/easter500.txt>
+
+
+# Set up environment for analysis
+
+The code below loads the packages used for this work.
+
+```{r}
+# load required packages
+library(tidyverse)
+library(skimr)
+library(rlang)
+library(ggh4x)
+library(plotly)
+library(knitr)
+```
+
+
+# Get, Prepare, and Process the weather data
+
+
+### Get the weather data
+
+The code below will read and load the weather data for the selections described in the Weather Data section. 
+
+```{r}
+# read data from website
+data <- read.csv('https://mesonet.agron.iastate.edu/cgi-bin/request/daily.py?network=IA_ASOS&stations=DBQ&stations=ALO&stations=BRL&stations=CID&stations=DSM&year1=1900&month1=1&day1=1&year2=2025&month2=7&day2=22&var=max_temp_f&var=min_temp_f&var=max_dewpoint_f&var=min_dewpoint_f&var=precip_in&var=avg_wind_speed_kts&var=avg_wind_drct&var=min_rh&var=avg_rh&var=max_rh&var=climo_high_f&var=climo_low_f&var=climo_precip_in&var=snow_in&var=snowd_in&var=min_feel&var=avg_feel&var=max_feel&var=max_wind_speed_kts&var=max_wind_gust_kts&var=srad_mj&na=blank&format=csv')
+```
+
+
+### Preview the data
+
+Now that we have the data, let's preview it to start to understand it. The code below shows a sample of the first six rows of the data.
+
+```{r}
+# preview
+head(data)
+```
+
+The code below gives us all the column names for the data set.
+
+```{r}
+# column names
+colnames(data)
+```
+
+The column names look to match the list of variables shown above from the mesonet site.
+
+
+### Convert and Filter the Data
+
+The following code converts the date information into a date format which will make it easier to work with later when we want to extract specific dates.
+
+```{r}
+# Convert the date into a date format
+data_date <- mutate(data, date = ymd(day))
+```
+
+
+Now for a quick check of the station codes to make sure we have only the five stations that were selected for data download.
+
+```{r}
+# get a unique list of station codes
+unique(data_date$station)
+```
+
+Perfect, the unique list of station codes has only the five stations that were requested for download.
+
+As described in the Background section this work will focus on the Dubuque station, which is labeled as DBQ in the station column. The following code will filter the data for the Dubuque station.
+
+```{r}
+# filter for Dubuque Station
+dbq_data  <- data_date %>% filter(station == "DBQ")
+```
+
+Now for a double check on the filtered data to make sure we only have the data for Dubuque (DBQ) station, the following code will list the unique station codes.
+
+```{r}
+# lets check the station column for unique stations
+unique(dbq_data$station)
+```
+
+Perfect, the only station is DBQ.
+
+
+### Preview the Dubuque Station Data
+
+First, let's check how many observations there are for the Dubuque station.
+
+```{r}
+# we can find how many observations there are for the Dubuque station
+nrow(dbq_data)
+```
+
+The following code provides some information and little preview of the data.
+
+```{r}
+# get preview
+head(dbq_data)
+
+# get some info
+str(dbq_data)
+glimpse(dbq_data)
+```
+
+My preferred way of getting a feel for the data is using the skim_without_charts function. This gives a summary of the data, data types, group variables, and some statistics for each variable type.
+
+```{r}
+# get a summary and some statistics
+skim_without_charts(dbq_data)
+```
+
+
+This tells us there are 27,197 observations (number of rows) and 23 variables (number of columns). From summary of the 'character' variable type we can see there are no missing (n_missing column) values for station and day. This is good, it means we do not have any missing data we need to deal with.
+ 
+For the 'numeric' variable type let's focus on the precip_in variable, recall that is amount of precipitation, to check it's statistics.
+
+Two interesting things for the precip_in variable jump out that should be investigated:
+
+* First, the precip_in variable has 13 missing values. This may be a problem if any of the 13 missing values correspond to the time periods we are interested in.
+* Second, p100 for precip_in is 22.4 inches, that seems like a lot of precipitation for one day, so it may be worth checking into this to see if this is accurate or not.
+
+
+### Investigate the 13 missing values
+
+First let's investigate the 13 missing values. Being there are only 13 missing values, an easy thing to check and review would be to see what months have missing values. If the months do not correspond to months that Easter can fall in, then we can ignore them.
+
+The code below will find the row locations within the data set that have the missing values.
+
+```{r}
+# finding the locations of missing values for precip_in
+locMissingPrecip <- is.na(dbq_data$precip_in)
+```
+
+Being we know there are only 13, one way to review them is simply print them out to review.
+
+```{r}
+# print out the dates with missing values
+dbq_data[locMissingPrecip, c(2,7)]
+```
+
+While the list above gives us the information we want, we can put it into a more readable list by extracting the names of the months and listing them out.
+
+```{r bulletlist, results = 'asis'}
+# get the months with missing values for precip_in
+missingPrecipMonths <- dbq_data[locMissingPrecip, 2] %>% ymd() %>% months() %>% unique()
+# print out the list months
+cat(paste("*", missingPrecipMonths), sep = "\n")
+```
+
+Reviewing the months with missing values and knowing that Easter must be sometime between March 22 to April 25 (see the Easter Sunday Dates section for details), we can conclude that none of the months with missing precipitation values correspond to months that Easter falls in. So, the missing values are not an issue.
+
+
+### Investigate the 22.4 inches of precipitation
+
+Now let's investigate the 22.4 inches of precipitation. That number seems really high for one day, so it would be good to try to determine if it is correct or not.
+
+To start, let's find the rows in the data set that have precipitation greater than 22 inches.
+
+```{r}
+# find rows with precip_in > 22
+loc22 <- dbq_data$precip_in > 22
+```
+
+Now let's check how many observations have precipitation greater than 22 inches.
+
+```{r}
+# check how many rows have values > 22
+cat("Number of days with precipitation greater than 22 inches: ", length(which(loc22)) )
+```
+
+There is exactly one observation with a value greater than 22.
+
+So, let's take a look at that observation for that day.
+
+```{r}
+# get the index
+row_with_preceip_gt_22 <- which(loc22)
+
+# lets take a look at that row
+rowLoc22 <- dbq_data[row_with_preceip_gt_22,]
+
+# print table with only station, day, and precip_in
+data22 <- rowLoc22 %>% select(station, day, precip_in)
+```
+
+```{r echo = FALSE, results = 'asis'}
+kable(data22, caption = "Day with precipitation greater than 22 inches", format = "markdown")
+```
+
+
+This event occurred on January 29, 1976. While this date is not of interest to us, it would be good to continue to check this data to see if it is correct. If it is found to not be correct, then maybe the accuracy of the entire data set should be questioned.
+
+January is a cold winter month in Iowa . Thus, maybe the 22.4 inches was snowfall and not rain. So, let's check the snow_in variable for the reported snowfall.
+
+```{r}
+# print table with only station, day, precip_in, snow_in, snowd_in
+rowLoc22 %>% select(station, day, precip_in, snow_in, snowd_in)
+```
+
+Well, the snowfall inches and snow depth are missing for that date. However, if we check the temperature for the day, maybe we can tell if it might have been snowfall or warm enough to have rained.
+
+```{r}
+# print table with temperature
+rowLoc22 %>% select(station, day, precip_in, max_temp_f, min_temp_f)
+```
+
+The minimum temperature that day was 12 degrees F and the high temperature that day was 24 degrees F. Thus, it is probably safe to say the 22.4 inches of precipitation on January 29, 1976 was snow. Wow, that's a lot of snow to get in one day, assuming this data is correct. Having lived in Iowa my entire life I know that it is certainly possible to get that much snow in one day, so I am assuming this data is correct. However, if this date was needed to answer our question, it would be worth investigating further to determine if it is correct.
+
+
+# Get, Prepare, and Process the Easter Sunday Dates
+
+As described previously the Easter Sunday dates used for this work were taken from the Excel file downloaded from the census.gov site. See the Easter Sunday Dates section for more details.
+The direct link to the Excel file: <https://www2.census.gov/software/x-13arima-seats/win-genhol/documentation/easter500.xls>
+
+The code below will load the Easter Sunday dates.
+
+```{r}
+# read Easter dates
+easter <- readxl::read_excel("easter500.xls")
+```
+
+Get a quick summary of the dates data.
+
+```{r}
+# summary
+skim_without_charts(easter)
+```
+
+The dataset has one missing value for each variable. So, let's check what rows have the missing values.
+
+```{r}
+# which row is missing
+misDateRow <- which(is.na(easter$Month))
+# print it
+cat("Row with missing data:", misDateRow)
+```
+```{r}
+easter[misDateRow,]
+```
+
+The row with the missing data is the last row of the dataset and has no data, so we can simply drop the row and ignore it without it having any impact on the analysis.
+
+The code below drops the last row with the missing values.
+
+```{r}
+# the last row has the missing data, so we can simply drop it
+easter <- easter[1:500,]
+```
+
+Here is a summary of the updated Easter dates data.
+
+```{r}
+# check summary
+skim_without_charts(easter)
+
+```
+
+There are no missing values now. Next the dates will be converted into a date format and the corresponding decade for each year will be calculated.
+
+```{r}
+# create a column for the date format and decade
+easter_dates <- easter %>% mutate(Decade = floor(Year/10)*10, Date = make_date(year = easter$Year, month = easter$Month, day = easter$Day))
+```
+
+Preview the updated dataset, the beginning of it and end of it.
+
+```{r}
+head(easter_dates)
+```
+
+```{r}
+tail(easter_dates)
+```
+
+The updated dataset looks to have the correct date and corresponding decade variables now.
+
+
+# Analyze & Visualize the Data
+
+Now that we have all the data needed to answer the question, "if it rained on Easter Sunday, did it rain the next seven Sundays?"
+
+Recalling that this study is only using the Dubuque station data. Therefore, only the Easter dates that the Dubuque weather station has data for are needed. The Easter dates will be filtered for only the dates in the Dubuque weather station data using the code below.
+
+```{r}
+# filter Easter dates
+dbq_easter_dates <- easter_dates %>% filter(Date %in% dbq_data$date)
+```
+
+In addition to the Easter Sunday dates, the dates for the next seven Sundays following each Easter Sunday are also needed. These dates will be calculated by simply adding weeks to the Easter Sunday date. These weeks will be added to the dataset as new variables.
+
+```{r}
+# calculate next 7 Sundays
+dbq_easter_Weeks <- dbq_easter_dates %>%
+  mutate(week_1 = Date + weeks(1)) %>% 
+  mutate(week_2 = Date + weeks(2)) %>%
+  mutate(week_3 = Date + weeks(3)) %>%
+  mutate(week_4 = Date + weeks(4)) %>%
+  mutate(week_5 = Date + weeks(5)) %>%
+  mutate(week_6 = Date + weeks(6)) %>%
+  mutate(week_7 = Date + weeks(7))
+```
+
+### Find How Many Easter Sundays had Rain
+
+Before jumping to answer the question, the first question would be how many Easter Sundays and what percentage of Easter Sundays did it rain? This is important to check to know if the dataset is going to be large enough to answer the question reasonably accurately. This will be done by filtering the weather data for the Easter Sunday dates and calculating how many of those Easter Sundays that it rained and the percentage of them that it rained. 
+
+```{r}
+# filter weather data to only Easter Sunday
+dbq_easter_data <- dbq_data %>% filter(date %in% dbq_easter_Weeks$Date)
+
+# calculate percentage of Easter Sundays that it rained
+easter_rain_percentage <- data.frame(event = c("Rain", "No Rain"), number_of_sundays = c(sum( dbq_easter_data$precip_in > 0 ), sum( dbq_easter_data$precip_in == 0 )), percentage = c(sum( dbq_easter_data$precip_in > 0 ) / nrow(dbq_easter_data) * 100, sum( dbq_easter_data$precip_in == 0 ) / nrow(dbq_easter_data) * 100))
+```
+
+Below is a plot showing the percentages for the Easter Sundays that had no rain and rain.
+
+```{r}
+# plot Easter Sunday rain percentage
+ggplot(data = easter_rain_percentage) +
+  geom_col(mapping = aes(x = event, y = percentage), color = "steelblue", fill = "steelblue") +
+  geom_text(mapping = aes(x = event, y = percentage-1.5, label = paste0( round(percentage, 1), "%")), color = "white") +
+  scale_y_continuous(breaks = seq(0,60,10)) + 
+  labs(title = "Dubuque (DBQ) Station", subtitle = paste0(nrow(dbq_easter_data), " Easter Sunday Observations"), x = "Easter Sunday", y = "Percentage (%)")
+```
+
+Below is a plot showing the number of Easter Sundays that had no rain and rain.
+
+```{r}
+# plot number of Sundays with rain
+ggplot(data = easter_rain_percentage) + 
+  geom_col(mapping = aes(x = event, y = number_of_sundays), color = "steelblue", fill = "steelblue") + 
+  geom_text(mapping = aes(x = event, y = number_of_sundays-1.5, label = number_of_sundays), color = "white") +
+  labs(title = "Dubuque (DBQ) Station", subtitle = paste0(nrow(dbq_easter_data), " Easter Sunday Observations"), x = "Easter Sunday", y = "Number of Sundays")
+```
+
+
+
+As seen from the plots 32 of the 75 Easter Sundays (42.7%) had rain, so just a little less than half. That seems like a large enough percentage that the data can provide some meaningful insight for answering the question.
+
+### Rain on Easter Sunday &rarr; Number of Following Sundays it Rained
+
+Now let's answer the question, if it rained on Easter Sunday, did it rain the next 7 Sundays?
+
+To answer this question the Dubuque station data will be filtered for only Easter Sundays that had a precipitation greater than zero, i.e., any recorded precipitation regardless of how much.
+
+```{r}
+# expect the dates to be equal, but give an error if they are not equal
+if ( ! identical(dbq_easter_data$date, dbq_easter_Weeks$Date) ) {
+  # give an error message
+  stop("The dates are not equal, check the datasets")
+}
+
+# first filter the Easter weeks to only the ones that it rained for
+dbq_easter_rain <- dbq_easter_Weeks[ dbq_easter_data$precip_in > 0,]
+
+```
+
+Taking the filtered rainy Easter Sundays dataset, the dataset will be converted into a long format to put the dates of the seven Sundays following Easter Sunday into a column named "week_date". Then using the long-formatted data, the data will be joined together with the weather data and a new variable column will be created named "rained" that will be a logical indicating if it rained (TRUE), i.e., precip_in > 0, on that day.
+
+```{r}
+# pivot data into long format
+dbq_easter_rain <- pivot_longer(data = dbq_easter_rain, cols = starts_with("week"), names_to = "week_number", values_to = "week_date")
+
+# join Easter dates & weather data -- then add variable to check if it rained on the date
+dbq_easter_rain_data <- inner_join(dbq_easter_rain, dbq_data, by = c("week_date" = "date")) %>% mutate(rained = precip_in > 0)
+
+```
+
+Now the dataset contains the dates and weather data for the seven Sundays following Easter Sunday for all Easter Sundays that it rained on. The next step is to calculate how many of the seven Sundays following Easter it rained.
+
+If the old saying "if it rains on Easter Sunday it will rain the next seven Sundays" is true, then this calculated total should add up to be seven. The code below will sum up the number of Sundays out of the first seven Sundays following Easter that it rained.
+
+```{r}
+# calculate how many of the seven sundays that it rained
+dbq_easter_rain_summary <- dbq_easter_rain_data %>% group_by(Date) %>% summarise(Decade = median(Decade), number_rain_days = sum(rained))
+# calculate year number for the decaded
+dbq_easter_rain_summary <- dbq_easter_rain_summary %>% mutate(year = year(Date))
+```
+
+The visualization below shows the number of Sundays out of the first seven Sundays following Easter Sunday that it rained when it rained on Easter Sunday. The plots are broken up by decade to make them more readable.
+
+```{r, out.width = "100%", fig.height = 6}
+# function to calculate breaks
+calc_breaks <- function(x) {
+  # calculate decade
+  dec = as.integer( floor(median(x)/10) * 10 )
+  # check if 1951
+  if ( dec == 1950L ) {
+    # set limits
+    return( seq(1951, dec+9, 1) )
+  } else if ( dec == 2020L ) {
+    # set limits -- 2025 is the last year with data being this was created in 2025
+    return( seq(dec, 2025, 1) )
+  } else {
+    # create breaks
+    return( seq(dec, dec+9, 1) )
+  } # end if
+  # create breaks
+  #seq(dec, dec+9, 1)
+} # end calc_breaks
+
+# function to calculate limits
+calc_limits <- function(x) {
+  # calculate decade
+  dec = as.integer( floor(median(x)/10) * 10 )
+  # check if 1951
+  if ( dec == 1950L ) {
+    # set limits
+    return( c(1951, dec+9) )
+  } else if ( dec == 2020L ) {
+    # set limits -- 2025 is the last year with data being this was created in 2025
+    return( c(dec, 2025) )
+  } else {
+    # create limits
+    return( c(dec, dec+9) )
+  } # end if
+} # end calc_limits
+
+# create x scale list 
+x_scale_list <- lapply(unique(dbq_easter_rain_summary$Decade), function(dec) {
+  new_formula(
+    lhs = expr(Decade == !!dec),
+    rhs = scale_x_continuous(limits = calc_limits, breaks = calc_breaks)
+  )
+})
+
+
+# create y scale list
+y_scale_list <- lapply(unique(dbq_easter_rain_summary$Decade), function(dec) {
+  scale_y_continuous(limits = c(0,7), breaks = 0:7)
+})
+
+
+# plot summary -- by year and facet by decade
+ggplot(data = dbq_easter_rain_summary) +
+  geom_col(mapping = aes(x = year, y = number_rain_days), color = "steelblue", fill = "steelblue") +
+  facet_wrap(~ Decade, scales = "free") +
+  facetted_pos_scales(x = x_scale_list, y = y_scale_list) +
+  theme(panel.grid.minor.y = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + 
+  labs(title = "Number of Sundays following rain on Easter Sunday that also had rain",
+       subtitle = "Only the first 7 Sundays following Easter Sunday are considered. (Dubuque 1951-2025)",
+       x = "Year (years with no data means it did not rain on Easter Sunday that year)",
+       y = "Number of Sundays it rained following rain on Easter Sunday")
+
+```
+
+# Conclusion
+
+Viewing the charts above, it is clearly seen that 2009 was the only year that it rained on Easter Sunday and rained the seven Sundays following Easter. There was only one year out of 32 when it rained on Easter Sunday and rained the following seven Sundays, which was 2009. Thus, it seems the old saying, "If it rains on Easter Sunday it will rain the next seven Sundays" is clearly not true for Dubuque based on the available 75 years of weather data from 1951-2025. 
+
