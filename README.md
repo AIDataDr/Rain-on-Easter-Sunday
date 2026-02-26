@@ -1,3 +1,6 @@
+<a id="top"></a>
+[![Home](https://img.shields.io/badge/Back%20to-Home-009911)](https://github.com/AIDataDr)     [![Portfolio TOC](https://img.shields.io/badge/Back%20to-Portfolio%20TOC-009911)](https://github.com/AIDataDr#portfolio-table-of-contents)
+
 # Rain on Easter Sunday
 
 ### Note
@@ -153,3 +156,7 @@ Viewing the charts above, it is clearly seen that 2009 was the only year that it
 
 This work was done using R and RStudio. The R Markdown (Rmd) file is included in the repository.
 The easiest way to view the R Markdown with the code is to view it on my RPubs page. Here is the link to this project on my RPubs page: <https://rpubs.com/AIDataDr/rain_on_easter_sunday>
+
+[Return to Top](#top)
+
+[![Home](https://img.shields.io/badge/Back%20to-Home-009911)](https://github.com/AIDataDr)     [![Portfolio TOC](https://img.shields.io/badge/Back%20to-Portfolio%20TOC-009911)](https://github.com/AIDataDr#portfolio-table-of-contents)
